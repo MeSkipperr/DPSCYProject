@@ -1,10 +1,14 @@
 .env
 Resource/auth/admin.js
 Resource/auth/recipient.js
-Resource/device/*
+Resource/device/*.json
 node_modules/
 Resource/function/getSystemInformation/command/commandIPTV.json
 Project/Remove-Data-Youtube/removeDataYoutube.txt
-Project/Reboot-System-Guest-Room-TV/removeDataYoutube.txt
+Project/Reboot-System-Guest-Room-TV/SystemNeedToReboot.txt
 Project/Monitoring-Network/log/*
 Project/Monitoring-Network/summary/*
+
+
+!Project/Monitoring-Network/log/.gitkeep
+!Project/Monitoring-Network/summary/.gitkeep
