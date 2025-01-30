@@ -1,7 +1,7 @@
 const { exec } = require('child_process');
 const cron = require('node-cron');
 const path = require('path');
-const { saveTableToNotepad,sendEmail,adbPath,IPTVData } = require("../importShortcut");
+const { saveTableToNotepad,sendEmail,adbPath,IPTVData, delayWithProgressBar } = require("../importShortcut");
 
 
 const emailData = {
@@ -41,6 +41,13 @@ const runCommand = (command) => {
 };
 
 const rebootDevice = async () => {
+    console.log("Restarting ADB server...");
+    await runCommand(`"${adbPath}" kill-server`);
+    await delayWithProgressBar(10000,"Stopping ADB server");
+
+    await runCommand(`"${adbPath}" start-server`);
+    await delayWithProgressBar(10000,"Starting ADB server");
+
     const devices = JSON.parse(IPTVData);
     const failedReboot = [];
     for (const device of devices) {
@@ -63,26 +70,36 @@ const rebootDevice = async () => {
 
             console.log(`Trying to get uptime device : ${device.name} | ${device.ipAddress} ...`);
             const uptime = `"${adbPath}" -s ${deviceAddress} shell cat /proc/uptime`;
-            const uptimeOutput = await runCommand(uptime);
-
-            if (uptimeOutput.toLowerCase().includes('failed')) {
-                console.error(`Cannot get uptime device : ${device.name}: ${uptimeOutput}`);
+            try {
+                const uptimeOutput = await runCommand(uptime);
+    
+                if (uptimeOutput.toLowerCase().includes('unauthorized')) {
+                    console.error(`Cannot get uptime device : ${device.name}: ${uptimeOutput}`);
+                    failedReboot.push({
+                        name: device.name,
+                        ipAddress: device.ipAddress,
+                        status: "Failed to get runtime"
+                    });
+                    continue;
+                }
+    
+                const uptimeSeconds = parseFloat(uptimeOutput.split(" ")[0]);
+                const uptimeDays = uptimeSeconds / (60 * 60 * 24);
+                
+                failedReboot.push({
+                    name: device.name,
+                    ipAddress: device.ipAddress,
+                    status: `Uptime ${uptimeDays} Days`
+                });
+                
+            } catch (error) {
                 failedReboot.push({
                     name: device.name,
                     ipAddress: device.ipAddress,
                     status: "Failed to get runtime"
                 });
-                continue;
+                console.error(`Cannot get uptime device : ${device.name}: ${uptimeOutput}`);
             }
-
-            const uptimeSeconds = parseFloat(uptimeOutput.split(" ")[0]);
-            const uptimeDays = uptimeSeconds / (60 * 60 * 24);
-            
-            failedReboot.push({
-                name: device.name,
-                ipAddress: device.ipAddress,
-                status: `Uptime ${uptimeDays} Days`
-            });
         } catch (error) {
             console.error(`Error trying to connect device ${device.name}:`, error);
             failedReboot.push({
