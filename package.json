@@ -9,6 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "nodemailer": "^6.10.0"
+    "child_process": "^1.0.2",
+    "dotenv": "^16.4.7",
+    "fs": "^0.0.1-security",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.0",
+    "path": "^0.12.7",
+    "ping": "^0.4.4",
+    "ssh2": "^1.16.0",
+    "xlsx": "^0.18.5"
   }
 }
