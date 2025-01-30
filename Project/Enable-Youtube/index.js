@@ -1,4 +1,4 @@
-const {sendEmail,adbPath,IPTVData} = require('../importShortcut');
+const {adbPath,IPTVData, delayWithProgressBar} = require('../importShortcut');
 
 const { exec } = require('child_process');
 
@@ -28,6 +28,14 @@ const  updateStatusTV = (array, targetName, updateStatus) => {
 // Fungsi utama untuk menangani tiap perangkat
 const processDevices = async () => {
     console.log(adbPath)
+
+    console.log("Restarting ADB server...");
+    await runCommand(`"${adbPath}" kill-server`);
+    await delayWithProgressBar(10000,"Stopping ADB server");
+
+    await runCommand(`"${adbPath}" start-server`);
+    await delayWithProgressBar(10000,"Starting ADB server");
+
     const statusError  = ["Connecting","Cannot connect to device" , "Failed to enable Youtube data application" ,"Success","Cannot reboot system"]
     const devices = JSON.parse(IPTVData);
     const clearDevices = [];
@@ -39,6 +47,9 @@ const processDevices = async () => {
 
             console.log(`Trying connect to : ${device.name} | ${device.ipAddress} ...`)
             const connectCommand = `"${adbPath}" connect ${deviceAddress}`;
+            const connectOutputFirstTry = await runCommand(connectCommand); 
+
+            console.log("Testing connect" , connectOutputFirstTry)
             const connectOutput = await runCommand(connectCommand);
 
             if (connectOutput.toLowerCase().includes('failed')) {
@@ -49,27 +60,34 @@ const processDevices = async () => {
             
             console.log(`Trying to enable Youtube data application : ${device.name} | ${device.ipAddress} ...`)
             const enableYoutube = `"${adbPath}" -s ${deviceAddress} shell pm enable ${youtubePackage}`;
-            const clearOutput = await runCommand(enableYoutube);
 
-            if (clearOutput.toLowerCase().includes('failed')) {
+            try {
+                const clearOutput = await runCommand(enableYoutube);
+    
+                if (clearOutput.toLowerCase().includes('unauthorized')) {
+                    updateStatusTV(clearDevices,device.name,statusError[2])
+                    console.error(`Cannot enable youtube data application ${device.name}: ${clearOutput}`);
+                    continue; 
+                }
+    
+                console.log(`Trying to reboot device : ${device.name} | ${device.ipAddress} ...`)
+                const rebootSystem = `"${adbPath}" -s ${deviceAddress} reboot`;
+                const rebootSystemOutput = await runCommand(rebootSystem);
+    
+                if (rebootSystemOutput.toLowerCase().includes('failed')) {
+                    updateStatusTV(rebootSystemOutput,device.name,statusError[4])
+                    console.error(`Cannot enable youtube data application ${device.name}: ${clearOutput}`);
+                    continue; 
+                }
+                
+                updateStatusTV(clearDevices,device.name,statusError[3])
+                
+            } catch (error) {
+                console.error(`Cannot enable youtube data application ${device.name}: ${clearOutput}`);
                 updateStatusTV(clearDevices,device.name,statusError[2])
-                console.error(`Cannot enable youtube data application ${device.name}: ${clearOutput}`);
-                continue; 
             }
-
-
-            console.log(`Trying to reboot device : ${device.name} | ${device.ipAddress} ...`)
-            const rebootSystem = `"${adbPath}" -s ${deviceAddress} reboot`;
-            const rebootSystemOutput = await runCommand(rebootSystem);
-
-            if (rebootSystemOutput.toLowerCase().includes('failed')) {
-                updateStatusTV(rebootSystemOutput,device.name,statusError[4])
-                console.error(`Cannot enable youtube data application ${device.name}: ${clearOutput}`);
-                continue; 
-            }
-
-            updateStatusTV(clearDevices,device.name,statusError[3])
         } catch (error) {
+            updateStatusTV(clearDevices,device.name,statusError[1])
             console.error(`Error trying to connect device ${device.name}:`, error);
         }
     }
