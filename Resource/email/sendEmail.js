@@ -1,4 +1,3 @@
-require("dotenv").config();
 // Import necessary modules
 const nodemailer = require("nodemailer"); // To send emails
 const path = require("path"); // To handle file paths
@@ -8,13 +7,14 @@ const fs = require("fs"); // To check if file exists
 const formatDate = require("../function/timeFormat");
 const sendErrorSystemAdmin = require("./sendErrorToAdmin");
 const recipientJSON = require("../auth/recipient");
+const sender = require("../auth/sender");
 
 // Configure the email transporter (e.g., Gmail service)
 const transporter = nodemailer.createTransport({
     service: "gmail", // Using Gmail as the email service
     auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS,
+        user: sender.EMAIL_USER, 
+        pass: sender.EMAIL_PASS,
     },
 });
 
@@ -28,7 +28,7 @@ const transporter = nodemailer.createTransport({
 async function sendEmail(recipients = null, emailData, senderData = null, fileAttachment = null) {
     const userRecipients = recipients || recipientJSON;
 
-    const senderEmail = senderData?.email || process.env.EMAIL_USER; // Fallback to .env
+    const senderEmail = senderData?.email || sender.EMAIL_USER; // Fallback to .env
     const senderName = senderData?.name || "DPSCY SYSTEM"; // Optional custom sender name
     
     for (const recipient of userRecipients) {

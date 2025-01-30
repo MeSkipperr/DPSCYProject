@@ -1,6 +1,7 @@
 .env
 Resource/auth/admin.js
 Resource/auth/recipient.js
+Resource/auth/sender.js
 Resource/device/*.json
 node_modules/
 Resource/function/getSystemInformation/command/commandIPTV.json

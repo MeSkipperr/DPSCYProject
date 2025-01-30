@@ -3,14 +3,15 @@ const nodemailer = require("nodemailer"); // Module to send emails
 
 // Import user data (list of users to send emails to)
 const adminUser = require("../auth/admin");
+const sender = require("../auth/sender");
 const formatDate = require("../function/timeFormat");
 
 // Configure the email transporter using Gmail service
 const transporter = nodemailer.createTransport({
   service: "gmail", // Using Gmail as the email service
   auth: {
-    user: process.env.EMAIL_USER, 
-    pass: process.env.EMAIL_PASS,
+    user: sender.EMAIL_USER, 
+    pass: sender.EMAIL_PASS,
   },
 });
 
@@ -32,7 +33,7 @@ async function sendErrorSystemAdmin(error) {
 
     // Configure the email options
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: sender.EMAIL_USER,
       to: user.email, // Recipient's email (from user data)
       subject: "System Error Notification", // Email subject
       text: `

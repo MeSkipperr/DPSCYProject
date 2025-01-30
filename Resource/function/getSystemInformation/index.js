@@ -1,4 +1,4 @@
-require("dotenv").config();
+
 const { Client } = require('ssh2');
 const fs = require('fs');
 const path = require('path');
@@ -6,9 +6,6 @@ const path = require('path');
 const readAndValidateJsonFiles = require("../getJsonData");
 const sendErrorSystemAdmin = require('../../email/sendErrorToAdmin');
 
-// SSH credentials
-const sshUsername = process.env.SSH_USERNAME ||''; // Replace with the appropriate SSH username
-const sshPassword = process.env.SSH_PASSWORD || ''; // Replace with the appropriate SSH password
 
 /**
  * Fetch system information from devices and save it to a file.
@@ -129,8 +126,8 @@ const fetchSystemInformation = async (devices,filePath) => {
             .connect({
                 host: device.ipAddress,
                 port: 22,
-                username: deviceConfig.userName ||sshUsername,
-                password: deviceConfig.password || sshPassword,
+                username: deviceConfig.userName ||"",
+                password: deviceConfig.password || "",
             });
     });
 };
