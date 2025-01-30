@@ -3,24 +3,31 @@ const path = require('path');
 const sendErrorSystemAdmin = require('../email/sendErrorToAdmin');
 
 /**
- * Membaca dan memvalidasi file JSON di dalam sebuah direktori dengan isi array yang fleksibel.
- * @param {string} dirPath - Path ke direktori yang berisi file JSON.
- * @param {Object} schema - Objek yang mendefinisikan struktur dan tipe yang diharapkan.
- * @param {boolean} validateWithSchema - Menentukan apakah data perlu divalidasi dengan schema atau tidak.
- * @returns {Promise<Array>} Array dari objek data yang sudah divalidasi (atau semua data jika tidak divalidasi).
+ * Reads and validates JSON files in a directory with a flexible array structure.
+ * @param {string} dirPath - The path to the directory containing JSON files.
+ * @param {Object} schema - An object defining the expected structure and data types.
+ * @param {boolean} validateWithSchema - Determines whether data should be validated against the schema.
+ * @param {string[]} excludedFiles - An array of filenames that should be ignored.
+ * @returns {Promise<Array>} An array of validated objects (or all data if not validated).
  */
-async function readAndValidateJsonFiles(dirPath, schema, validateWithSchema = true) {
+async function readAndValidateJsonFiles(dirPath, schema, validateWithSchema = true, excludedFiles = []) {
     const validData = [];
 
     try {
         const files = fs.readdirSync(dirPath);
 
         for (const file of files) {
+            // Skip files listed in excludedFiles
+            if (excludedFiles.includes(file)) {
+                console.log(`Skipping excluded file: ${file}`);
+                continue;
+            }
+
             const filePath = path.join(dirPath, file);
 
-            // Lewati file yang bukan file .json
+            // Skip non-JSON files
             if (path.extname(file) !== '.json') {
-                console.log(`Melewati file non-JSON: ${file}`);
+                console.log(`Skipping non-JSON file: ${file}`);
                 continue;
             }
 
@@ -28,27 +35,27 @@ async function readAndValidateJsonFiles(dirPath, schema, validateWithSchema = tr
                 const fileContent = fs.readFileSync(filePath, 'utf-8');
                 const data = JSON.parse(fileContent);
 
-                // Jika tidak perlu validasi, langsung tambahkan data
+                // If validation is not required, add the data directly
                 if (!validateWithSchema) {
                     validData.push(...data);
                     continue;
                 }
 
-                // Validasi format berdasarkan schema yang diberikan
+                // Validate format based on the given schema
                 const isValid = data.every(item => {
                     if (item) {
                         return Object.entries(schema).every(([key, type]) => {
                             if (type === 'array') {
-                                // Cek apakah kolom 'command' adalah array, tanpa memvalidasi isi array
+                                // Check if the 'command' field is an array without validating its contents
                                 if (Array.isArray(item[key])) {
-                                    console.log(`Field '${key}' di file ${file} adalah array: valid`);
+                                    console.log(`Field '${key}' in file ${file} is an array: valid`);
                                     return true;
                                 } else {
-                                    console.log(`Field '${key}' di file ${file} bukan array`);
+                                    console.log(`Field '${key}' in file ${file} is not an array`);
                                     return false;
                                 }
                             }
-                            // Cek apakah sesuai dengan tipe yang diharapkan (string)
+                            // Check if the value matches the expected data type (string)
                             return typeof item[key] === type;
                         });
                     }
@@ -58,15 +65,15 @@ async function readAndValidateJsonFiles(dirPath, schema, validateWithSchema = tr
                 if (isValid) {
                     validData.push(...data);
                 } else {
-                    console.log(`Format tidak valid di file: ${file}`);
+                    console.log(`Invalid format in file: ${file}`);
                 }
             } catch (err) {
-                console.log(`Terjadi kesalahan saat memproses file ${file}:`, err.message);
+                console.log(`Error processing file ${file}:`, err.message);
                 sendErrorSystemAdmin(err);
             }
         }
     } catch (err) {
-        console.error('Kesalahan saat membaca direktori:', err.message);
+        console.error('Error reading directory:', err.message);
         sendErrorSystemAdmin(err);
     }
 

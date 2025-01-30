@@ -106,7 +106,7 @@ let getAlldata = false;
   };
 
   const dirPath = path.join(__dirname, "../../Resource/device");
-  const allValidData = await readAndValidateJsonFiles(dirPath, schema);
+  const allValidData = await readAndValidateJsonFiles(dirPath, schema,true,["ipTv.json"]);
 
   // Add the valid data to the global allDevices array
   allDevices.push(...allValidData);
