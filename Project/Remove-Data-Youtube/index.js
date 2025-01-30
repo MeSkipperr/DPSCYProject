@@ -2,7 +2,7 @@ const { exec } = require("child_process");
 const fs = require("fs");
 const cron = require("node-cron");
 const path = require("path");
-const { saveTableToNotepad, sendEmail, adbPath, IPTVData } = require("../importShortcut");
+const { saveTableToNotepad, sendEmail, adbPath, IPTVData ,delayWithProgressBar} = require("../importShortcut");
 
 const youtubePackage = "com.google.android.youtube.tv";
 
@@ -54,6 +54,13 @@ const fileAttachment = {
 
 // Fungsi utama untuk menangani tiap perangkat
 const processDevices = async () => {
+  console.log("Restarting ADB server...");
+  await runCommand(`"${adbPath}" kill-server`);
+  await delayWithProgressBar(10000,"Stopping ADB server");
+
+  await runCommand(`"${adbPath}" start-server`);
+  await delayWithProgressBar(10000,"Starting ADB server");
+
   const statusError = {
     CONNECTING:       "Connecting", //Device Office
     FAILED_CONNECT:   "Cannot connect to device", //Unauthorized

@@ -4,7 +4,7 @@ const fs = require('fs');
 const sendEmail = require('../Resource/email/sendEmail');
 const sendErrorSystemAdmin = require('../Resource/email/sendErrorToAdmin');
 const { saveTableToNotepad,clearNotepad } = require("../Resource/function/notepadManager");
-const  delay = require("../Resource/function/delay");
+const  {delay,delayWithLoading,delayWithProgressBar} = require("../Resource/function/delay");
 const  formatDate = require("../Resource/function/timeFormat");
 const  createListError = require("../Resource/function/createListError");
 const  readAndValidateJsonFiles = require("../Resource/function/getJsonData");
@@ -26,5 +26,7 @@ module.exports = {
     fetchSystemInformation,
     readAndValidateJsonFiles,
     createListError,
-    formatDate
+    formatDate,
+    delayWithLoading,
+    delayWithProgressBar
 };
