@@ -137,7 +137,9 @@ const processDevices = async () => {
   }
 
   // Jika ada perangkat yang gagal, ulangi proses untuk perangkat tersebut
-  if (errorDevice.length > 0) {
+  const tryConnectDevices = errorDevice;
+  console.log("Error Device : ",tryConnectDevices);
+  if (tryConnectDevices.length > 0) {
     console.log("\nRetrying failed devices...\n");
 
     console.log("Restarting ADB server...");
@@ -147,7 +149,7 @@ const processDevices = async () => {
     await runCommand(`"${adbPath}" start-server`);
     await delayWithProgressBar(10000, "Starting ADB server");
 
-    for (const device of errorDevice) {
+    for (const device of tryConnectDevices) {
       await processDevice(device);
     }
   }
