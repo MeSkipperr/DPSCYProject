@@ -66,8 +66,8 @@ const rebootDevice = async () => {
     const devices = JSON.parse(IPTVData);
     const clearDevices = [];
 
-    const processDevice = async (device) => {
-        const deviceAddress = `${device.ipAddress}:5555`;
+    const processDevice = async (device,deviceAddressParams = null) => {
+        const deviceAddress = deviceAddressParams ||`${device.ipAddress}:5555` ;
 
         try {
             console.log(`Trying to connect to: ${device.name} | ${device.ipAddress} ...`);
@@ -127,7 +127,7 @@ const rebootDevice = async () => {
     // Jika ada perangkat yang gagal, restart ADB lagi lalu ulangi proses
     await runCommand(`"${adbPath}" devices`);
 
-    const tryConnectDevices = clearDevices.filter(device=>device.status !== statusError.SUCCESS);
+    const tryConnectDevices = clearDevices.filter(device => ![statusError.SUCCESS].includes(device.status));
     
     console.log("Error Device : ",tryConnectDevices);
 
@@ -142,7 +142,7 @@ const rebootDevice = async () => {
         await delayWithProgressBar(10000, "Starting ADB server");
 
         for (const device of tryConnectDevices) {
-            await processDevice(device);
+            await processDevice(device,device.ipAddress);
         }
     }
     await runCommand(`"${adbPath}" devices`);
