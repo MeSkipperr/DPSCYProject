@@ -71,7 +71,6 @@ const processDevices = async () => {
 
   const devices = JSON.parse(IPTVData);
   const clearDevices = [];
-  const errorDevice = [];
 
   const processDevice = async (device) => {
     const deviceAddress = `${device.ipAddress}:5555`;
@@ -88,7 +87,6 @@ const processDevices = async () => {
       if (connectOutput.toLowerCase().includes("failed")) {
         updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
         console.error(`Cannot connect to device ${device.name}: ${connectOutput}`);
-        errorDevice.push(device);
         return;
       }
 
@@ -101,14 +99,12 @@ const processDevices = async () => {
         if (clearOutput.toLowerCase().includes("failed")) {
           updateStatusTV(clearDevices, device.name, statusError.FAILED_CLEAR);
           console.error(`Failed to clear YouTube data on ${device.name}: ${clearOutput}`);
-          errorDevice.push(device);
           return;
         }
 
         if (clearOutput.toLowerCase().includes("unauthorized")) {
           updateStatusTV(clearDevices, device.name, statusError.UNAUTHORIZED);
           console.error(`Device unauthorized: ${device.name}. Please check ADB authorization.`);
-          errorDevice.push(device);
           return;
         }
 
@@ -116,12 +112,10 @@ const processDevices = async () => {
       } catch (error) {
         updateStatusTV(clearDevices, device.name, statusError.FAILED_CLEAR);
         console.error(`Error clearing YouTube data for ${device.name}:`, error);
-        errorDevice.push(device);
       }
     } catch (error) {
       updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
       console.error(`Error connecting to device ${device.name}:`, error);
-      errorDevice.push(device);
     }
   };
 
@@ -138,7 +132,7 @@ const processDevices = async () => {
   await runCommand(`"${adbPath}" devices`);
   
   // Jika ada perangkat yang gagal, ulangi proses untuk perangkat tersebut
-  const tryConnectDevices = errorDevice;
+  const tryConnectDevices = clearDevices.filter(device=>device.status !== statusError.SUCCESS);
   console.log("Error Device : ",tryConnectDevices);
   if (tryConnectDevices.length > 0) {
     console.log("\nRetrying failed devices...\n");

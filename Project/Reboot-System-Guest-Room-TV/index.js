@@ -65,7 +65,6 @@ const rebootDevice = async () => {
 
     const devices = JSON.parse(IPTVData);
     const clearDevices = [];
-    const retryDevices = [];
 
     const processDevice = async (device) => {
         const deviceAddress = `${device.ipAddress}:5555`;
@@ -79,7 +78,6 @@ const rebootDevice = async () => {
                 console.error(`Cannot connect to device ${device.name}: ${connectOutput}`);
                 updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
 
-                retryDevices.push(device);
                 return;
             }
 
@@ -93,7 +91,6 @@ const rebootDevice = async () => {
                     console.error(`Cannot get uptime for device: ${device.name}: ${uptimeOutput}`);
                     updateStatusTV(clearDevices, device.name, statusError.UNAUTHORIZED);
 
-                    retryDevices.push(device);
                     return;
                 }
 
@@ -107,13 +104,11 @@ const rebootDevice = async () => {
                 console.error(`Error getting uptime for device ${device.name}:`, error);
                 updateStatusTV(clearDevices, device.name, statusError.FAILED_UPTIME);
 
-                retryDevices.push(device);
             }
         } catch (error) {
             console.error(`Error connecting to device ${device.name}:`, error);
             updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
 
-            retryDevices.push(device);
         }
     };
 
@@ -132,7 +127,8 @@ const rebootDevice = async () => {
     // Jika ada perangkat yang gagal, restart ADB lagi lalu ulangi proses
     await runCommand(`"${adbPath}" devices`);
 
-    const tryConnectDevices = retryDevices;
+    const tryConnectDevices = clearDevices.filter(device=>device.status !== statusError.SUCCESS);
+    
     console.log("Error Device : ",tryConnectDevices);
 
     if (tryConnectDevices.length > 0) {
@@ -151,9 +147,9 @@ const rebootDevice = async () => {
     }
     await runCommand(`"${adbPath}" devices`);
 
-    if (failedReboot.length > 0) {
-        console.table(failedReboot);
-        await saveTableToNotepad(failedReboot, path.join(__dirname, 'SystemNeedToReboot.txt'));
+    if (clearDevices.length > 0) {
+        console.table(clearDevices);
+        await saveTableToNotepad(clearDevices, path.join(__dirname, 'SystemNeedToReboot.txt'));
         sendEmail(null, emailData, null, fileAttachment);
     }
 };
