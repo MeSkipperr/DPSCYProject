@@ -127,7 +127,7 @@ const rebootDevice = async () => {
     // Jika ada perangkat yang gagal, restart ADB lagi lalu ulangi proses
     await runCommand(`"${adbPath}" devices`);
 
-    const tryConnectDevices = clearDevices.filter(device => ![statusError.SUCCESS].includes(device.status));
+    const tryConnectDevices = clearDevices.filter(device => !device.status.includes(statusError.SUCCESS));
     
     console.log("Error Device : ",tryConnectDevices);
 

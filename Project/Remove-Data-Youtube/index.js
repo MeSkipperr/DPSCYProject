@@ -132,7 +132,7 @@ const processDevices = async () => {
   await runCommand(`"${adbPath}" devices`);
   
   // Jika ada perangkat yang gagal, ulangi proses untuk perangkat tersebut
-  const tryConnectDevices = clearDevices.filter(device => ![statusError.SUCCESS].includes(device.status));
+  const tryConnectDevices = clearDevices.filter(device => !device.status.includes(statusError.SUCCESS));  
 
   console.log("Error Device : ",tryConnectDevices);
   if (tryConnectDevices.length > 0) {
