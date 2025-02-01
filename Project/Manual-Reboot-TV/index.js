@@ -42,7 +42,7 @@ async function askRoomNumberToReboot() {
         } 
 
         const devices = JSON.parse(IPTVData);
-        const device = devices.find(d => d.name.includes(`IPTV Room ${roomNumber}`));
+        const device = devices.find(d => d.name === `IPTV Room ${roomNumber}`);
 
         if(!device){
             console.log("Room Number Not Found")
