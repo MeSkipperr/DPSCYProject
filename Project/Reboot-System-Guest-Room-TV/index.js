@@ -1,8 +1,15 @@
 const { exec } = require('child_process');
 const cron = require('node-cron');
 const path = require('path');
-const { saveTableToNotepad,sendEmail,adbPath,IPTVData, delayWithProgressBar } = require("../importShortcut");
+const { saveTableToNotepad, sendEmail, adbPath, IPTVData, delayWithProgressBar } = require("../importShortcut");
 
+const updateStatusTV = (array, targetName, updateStatus) => {
+    array.forEach((item) => {
+    if (item.name === targetName) {
+        item.status = updateStatus;
+    }
+    });
+};
 
 const emailData = {
     subject: "TV Device Reboot Summary for Guest Rooms",
@@ -43,70 +50,98 @@ const runCommand = (command) => {
 const rebootDevice = async () => {
     console.log("Restarting ADB server...");
     await runCommand(`"${adbPath}" kill-server`);
-    await delayWithProgressBar(10000,"Stopping ADB server");
+    await delayWithProgressBar(10000, "Stopping ADB server");
 
     await runCommand(`"${adbPath}" start-server`);
-    await delayWithProgressBar(10000,"Starting ADB server");
+    await delayWithProgressBar(10000, "Starting ADB server");
+
+    const statusError = {
+        CONNECTING: "Connecting",
+        FAILED_CONNECT: "Failed to connect",
+        FAILED_UPTIME: "Failed to get uptime",
+        SUCCESS: "Success",
+        UNAUTHORIZED: "Unauthorized device - Please allow ADB debugging",
+    };
 
     const devices = JSON.parse(IPTVData);
-    const failedReboot = [];
-    for (const device of devices) {
+    const clearDevices = [];
+    const retryDevices = [];
+
+    const processDevice = async (device) => {
         const deviceAddress = `${device.ipAddress}:5555`;
 
         try {
-            console.log(`Trying connect to : ${device.name} | ${device.ipAddress} ...`);
+            console.log(`Trying to connect to: ${device.name} | ${device.ipAddress} ...`);
             const connectCommand = `"${adbPath}" connect ${deviceAddress}`;
             const connectOutput = await runCommand(connectCommand);
 
-            if (connectOutput.toLowerCase().includes('failed')) {
-                console.error(`Cannot Connect to device ${device.name}: ${connectOutput}`);
-                failedReboot.push({
-                    name: device.name,
-                    ipAddress: device.ipAddress,
-                    status: "Failed to connect"
-                });
-                continue; 
+            if (connectOutput.toLowerCase().includes("failed")) {
+                console.error(`Cannot connect to device ${device.name}: ${connectOutput}`);
+                updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
+
+                retryDevices.push(device);
+                return;
             }
 
-            console.log(`Trying to get uptime device : ${device.name} | ${device.ipAddress} ...`);
-            const uptime = `"${adbPath}" -s ${deviceAddress} shell cat /proc/uptime`;
+            console.log(`Trying to get uptime for: ${device.name} | ${device.ipAddress} ...`);
+            const uptimeCommand = `"${adbPath}" -s ${deviceAddress} shell cat /proc/uptime`;
+
             try {
-                const uptimeOutput = await runCommand(uptime);
-    
-                if (uptimeOutput.toLowerCase().includes('unauthorized')) {
-                    console.error(`Cannot get uptime device : ${device.name}: ${uptimeOutput}`);
-                    failedReboot.push({
-                        name: device.name,
-                        ipAddress: device.ipAddress,
-                        status: "Failed to get runtime"
-                    });
-                    continue;
+                const uptimeOutput = await runCommand(uptimeCommand);
+
+                if (uptimeOutput.toLowerCase().includes("unauthorized")) {
+                    console.error(`Cannot get uptime for device: ${device.name}: ${uptimeOutput}`);
+                    updateStatusTV(clearDevices, device.name, statusError.UNAUTHORIZED);
+
+                    retryDevices.push(device);
+                    return;
                 }
-    
+
                 const uptimeSeconds = parseFloat(uptimeOutput.split(" ")[0]);
                 const uptimeDays = uptimeSeconds / (60 * 60 * 24);
-                
-                failedReboot.push({
-                    name: device.name,
-                    ipAddress: device.ipAddress,
-                    status: `Uptime ${uptimeDays} Days`
-                });
-                
+
+                updateStatusTV(clearDevices, device.name, `${statusError.SUCCESS} - Uptime ${uptimeDays.toFixed(2)} Days`);
+
+
             } catch (error) {
-                failedReboot.push({
-                    name: device.name,
-                    ipAddress: device.ipAddress,
-                    status: "Failed to get runtime"
-                });
-                console.error(`Cannot get uptime device : ${device.name}: ${uptimeOutput}`);
+                console.error(`Error getting uptime for device ${device.name}:`, error);
+                updateStatusTV(clearDevices, device.name, statusError.FAILED_UPTIME);
+
+                retryDevices.push(device);
             }
         } catch (error) {
-            console.error(`Error trying to connect device ${device.name}:`, error);
-            failedReboot.push({
-                name: device.name,
-                ipAddress: device.ipAddress,
-                status: "Error occurred"
-            });
+            console.error(`Error connecting to device ${device.name}:`, error);
+            updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
+
+            retryDevices.push(device);
+        }
+    };
+
+    // Loop utama
+    for (const device of devices) {
+        const deviceAddress = `${device.ipAddress}:5555`;
+
+        clearDevices.push({
+            name: device.name,
+            ipAddress: deviceAddress,
+            status: statusError.CONNECTING,
+        });
+        await processDevice(device);
+    }
+
+    // Jika ada perangkat yang gagal, restart ADB lagi lalu ulangi proses
+    if (retryDevices.length > 0) {
+        console.log("\nRetrying failed devices...\n");
+
+        console.log("Restarting ADB server...");
+        await runCommand(`"${adbPath}" kill-server`);
+        await delayWithProgressBar(10000, "Stopping ADB server");
+
+        await runCommand(`"${adbPath}" start-server`);
+        await delayWithProgressBar(10000, "Starting ADB server");
+
+        for (const device of retryDevices) {
+            await processDevice(device);
         }
     }
 
