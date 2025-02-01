@@ -56,71 +56,99 @@ const fileAttachment = {
 const processDevices = async () => {
   console.log("Restarting ADB server...");
   await runCommand(`"${adbPath}" kill-server`);
-  await delayWithProgressBar(10000,"Stopping ADB server");
+  await delayWithProgressBar(10000, "Stopping ADB server");
 
   await runCommand(`"${adbPath}" start-server`);
-  await delayWithProgressBar(10000,"Starting ADB server");
+  await delayWithProgressBar(10000, "Starting ADB server");
 
   const statusError = {
-    CONNECTING:       "Connecting", //Device Office
-    FAILED_CONNECT:   "Cannot connect to device", //Unauthorized
-    FAILED_CLEAR:     "Failed to clear YouTube data application",//Unauthorized
-    SUCCESS:          "Success",
-    UNAUTHORIZED:     "Unauthorized device - Please allow ADB debugging", // Unauthorized
+    CONNECTING: "Connecting",
+    FAILED_CONNECT: "Cannot connect to device",
+    FAILED_CLEAR: "Failed to clear YouTube data application",
+    SUCCESS: "Success",
+    UNAUTHORIZED: "Unauthorized device - Please allow ADB debugging",
   };
 
   const devices = JSON.parse(IPTVData);
   const clearDevices = [];
+  const errorDevice = [];
 
-  for (const device of devices) {
+  const processDevice = async (device) => {
     const deviceAddress = `${device.ipAddress}:5555`;
 
     try {
-      clearDevices.push({
-        name: device.name,
-        ipAddress: deviceAddress,
-        status: statusError.CONNECTING,
-      });
 
       console.log(`Trying to connect to: ${device.name} | ${device.ipAddress} ...`);
       const connectCommand = `"${adbPath}" connect ${deviceAddress}`;
-      const connectOutputFirstTry = await runCommand(connectCommand); 
+      const connectOutputFirstTry = await runCommand(connectCommand);
 
-      console.log("Testing connect" , connectOutputFirstTry)
+      console.log("Testing connect", connectOutputFirstTry);
       const connectOutput = await runCommand(connectCommand);
 
       if (connectOutput.toLowerCase().includes("failed")) {
         updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
         console.error(`Cannot connect to device ${device.name}: ${connectOutput}`);
-        continue;
+        errorDevice.push(device);
+        return;
       }
 
       console.log(`Trying to clear YouTube data: ${device.name} | ${device.ipAddress} ...`);
       const clearCommand = `"${adbPath}" -s ${deviceAddress} shell pm clear ${youtubePackage}`;
-      
+
       try {
         const clearOutput = await runCommand(clearCommand);
 
         if (clearOutput.toLowerCase().includes("failed")) {
           updateStatusTV(clearDevices, device.name, statusError.FAILED_CLEAR);
           console.error(`Failed to clear YouTube data on ${device.name}: ${clearOutput}`);
-          continue;
+          errorDevice.push(device);
+          return;
         }
 
         if (clearOutput.toLowerCase().includes("unauthorized")) {
           updateStatusTV(clearDevices, device.name, statusError.UNAUTHORIZED);
           console.error(`Device unauthorized: ${device.name}. Please check ADB authorization.`);
-          continue;
+          errorDevice.push(device);
+          return;
         }
 
         updateStatusTV(clearDevices, device.name, statusError.SUCCESS);
       } catch (error) {
         updateStatusTV(clearDevices, device.name, statusError.FAILED_CLEAR);
         console.error(`Error clearing YouTube data for ${device.name}:`, error);
+        errorDevice.push(device);
       }
     } catch (error) {
       updateStatusTV(clearDevices, device.name, statusError.FAILED_CONNECT);
       console.error(`Error connecting to device ${device.name}:`, error);
+      errorDevice.push(device);
+    }
+  };
+
+  for (const device of devices) {
+    const deviceAddress = `${device.ipAddress}:5555`;
+
+    clearDevices.push({
+      name: device.name,
+      ipAddress: deviceAddress,
+      status: statusError.CONNECTING,
+    });
+    await processDevice(device);
+  }
+
+  // Jika ada perangkat yang gagal, ulangi proses untuk perangkat tersebut
+  if (errorDevice.length > 0) {
+    console.log("\nRetrying failed devices...\n");
+
+    console.log("Restarting ADB server...");
+    await runCommand(`"${adbPath}" kill-server`);
+    await delayWithProgressBar(10000, "Stopping ADB server");
+
+    await runCommand(`"${adbPath}" start-server`);
+    await delayWithProgressBar(10000, "Starting ADB server");
+
+    for (const device of errorDevice) {
+      await processDevice(device);
     }
   }
 
