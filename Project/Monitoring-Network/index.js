@@ -121,7 +121,7 @@ let getAlldata = false;
   await createListError(unreachableDevices,path.join(__dirname, "summary"));
   await fetchSystemInformation(allDevices,path.join(__dirname, "summary","Device_Information.txt"));
 
-  await delay(180000);
+  await delay(1800000);
 
   await sendListError(path.join(__dirname, "summary","DeviceError.xlsx"));
   await sendSystemInformation(path.join(__dirname, "summary","Device_Information.txt"));
