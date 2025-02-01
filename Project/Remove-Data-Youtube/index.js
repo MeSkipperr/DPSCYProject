@@ -135,7 +135,8 @@ const processDevices = async () => {
     });
     await processDevice(device);
   }
-
+  await runCommand(`"${adbPath}" devices`);
+  
   // Jika ada perangkat yang gagal, ulangi proses untuk perangkat tersebut
   const tryConnectDevices = errorDevice;
   console.log("Error Device : ",tryConnectDevices);
@@ -153,6 +154,8 @@ const processDevices = async () => {
       await processDevice(device);
     }
   }
+
+  await runCommand(`"${adbPath}" devices`);
 
   console.table(clearDevices);
   await saveTableToNotepad(clearDevices, logFile);
