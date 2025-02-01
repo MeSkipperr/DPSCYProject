@@ -165,4 +165,4 @@ cron.schedule("0 13 * * *", () => {
 });
 
 // Eksekusi pertama kali saat script dijalankan
-processDevices();
+// processDevices();
