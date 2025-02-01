@@ -31,7 +31,8 @@ const  updateStatusTV = (array, targetName, updateStatus) => {
 
 // Function to ask for number input and process it
 async function askRoomNumberToReboot() {
-    console.log("Please Input Room Number : ")
+    console.log("Please enter the room number that needs to be rebooted:");
+
     rl.question('=', async (input) => {
         const roomNumber = parseFloat(input);
 
