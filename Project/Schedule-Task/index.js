@@ -1,6 +1,8 @@
-const { exec } = require("child_process"); // To execute shell commands
-const cron = require("node-cron"); // For scheduling tasks
-const {sendErrorSystemAdmin} = require("../importShortcut")
+const { exec } = require("child_process"); // Untuk mengeksekusi perintah shell
+const cron = require("node-cron"); // Untuk menjadwalkan tugas
+const fs = require("fs"); // Untuk operasi file sistem
+const path = require("path"); // Untuk manipulasi path file
+const { sendErrorSystemAdmin } = require("../importShortcut"); // Untuk menangani error sistem
 
 //Restart Computer
 cron.schedule("0 9 * * 1", async () => {
